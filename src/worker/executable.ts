@@ -38,8 +38,8 @@ export async function pushBinary(
     };
 
     // TODO: multiple set
-    await redis.setBuffer(name + redisBinarySuffix, binary, 'GET');
-    await redis.setBuffer(name + redisMetadataSuffix, encode(data), 'GET');
+    await redis.set(name + redisBinarySuffix, binary);
+    await redis.set(name + redisMetadataSuffix, encode(data));
 }
 
 // Return value: [path, language, code]
