@@ -20,6 +20,7 @@ import {
     JudgeTask,
     SubtaskState,
 } from '../interface/judgeTask.js';
+import { inspect } from 'util';
 
 function calculateSubtaskScore(
     scoringType: 'sum' | 'mul' | 'min',
@@ -43,9 +44,12 @@ export abstract class JudgerBase {
     task: JudgeTask;
 
     constructor(test: Test, task: JudgeTask, p: number) {
+        logger.verbose('Contructing JudgerBase');
         this.testData = test;
         this.task = task;
         this.priority = p;
+
+        logger.silly(inspect(this.testData, { depth: 100 }));
     }
 
     async preprocessTestData(): Promise<void> {}
@@ -63,6 +67,8 @@ export abstract class JudgerBase {
 
         if (!this.task.judgeState.subtasks[subIdx])
             throw new Error(`Judging subtask ${subIdx}: state not exist`);
+
+        logger.verbose(`Judging subtask ${subIdx} in skippable`);
 
         // set an initial score for min
         this.task.judgeState.subtasks[subIdx].score =
@@ -114,7 +120,12 @@ export abstract class JudgerBase {
         if (!this.task.judgeState.subtasks[subIdx])
             throw new Error(`Judging subtask ${subIdx}: state not exist`);
 
+        logger.verbose(`Judging subtask ${subIdx} in parallel`);
+
         this.task.judgeState.subtasks[subIdx].score = 0;
+        logger.silly(
+            `Subtask ${subIdx} score: ${this.task.judgeState.subtasks[subIdx].score}`,
+        );
         await Promise.all(
             this.testData.subtasks[subIdx].cases.map(async (c, caseIdx) => {
                 logger.verbose(`Judging subtask ${subIdx}, case ${caseIdx}.`);
@@ -129,18 +140,25 @@ export abstract class JudgerBase {
                     caseState;
 
                 this.task.judgeState.subtasks[subIdx].score = Math.floor(
-                    this.task.judgeState.subtasks[subIdx].score +
-                        caseState.caseStatus ===
-                        CaseStatus.Accepted
-                        ? this.testData.subtasks[subIdx].score
-                        : 0,
+                    this.task.judgeState.subtasks[subIdx].testcases.reduce(
+                        (cnt, c) =>
+                            cnt +
+                            (c.caseStatus === CaseStatus.Accepted
+                                ? this.testData.subtasks[subIdx].score
+                                : 0),
+                        0,
+                    ) / this.testData.subtasks[subIdx].cases.length,
                 );
 
+                logger.silly(
+                    `Subtask ${subIdx} score: ${this.task.judgeState.subtasks[subIdx].score}`,
+                );
                 report(this.task);
             }),
         );
 
         this.task.score += this.task.judgeState.subtasks[subIdx].score;
+        logger.silly(`Task Score: ${this.task.score}`);
         report(this.task);
     }
 
@@ -154,155 +172,6 @@ export abstract class JudgerBase {
                     : this.skipJudge(idx, report),
             ),
         );
-        // const updateSubtaskScore = (subtaskIndex: number) => {
-        //     const subtask = task.judgeState.subtasks[subtaskIndex];
-        //     if (!subtask || !this.testData.subtasks[subtaskIndex]) return;
-        //     subtask.score = calculateSubtaskScore(
-        //         this.testData.subtasks[subtaskIndex].type,
-        //         subtask.testcases.map(
-        //             (c) =>
-        //                 (c.caseStatus === CaseStatus.Accepted ? 1 : 0) *
-        //                 this.testData.subtasks[subtaskIndex].score,
-        //         ),
-        //     );
-        // };
-        // const testcaseDetailsCache: Map<string, CaseState> = new Map();
-        // const judgeTestcaseWrapper = async (
-        //     curCase: TestCase,
-        //     started: () => Promise<void>,
-        // ): Promise<CaseState> => {
-        //     if (testcaseDetailsCache.has(curCase.prefix)) {
-        //         return testcaseDetailsCache.get(curCase.prefix);
-        //     }
-        //     const result: CaseState = await this.judgeTestcase(
-        //         curCase,
-        //         started,
-        //     );
-        //     testcaseDetailsCache.set(curCase.prefix, result);
-        //     return result;
-        // };
-        // for (
-        //     let subtaskIndex = 0;
-        //     subtaskIndex < this.testData.subtasks.length;
-        //     subtaskIndex++
-        // ) {
-        //     updateSubtaskScore(subtaskIndex);
-        // }
-        // logger.debug(`Totally ${task.judgeState.subtasks.length} subtasks.`);
-        // const judgeTasks: Promise<void>[] = [];
-        // for (
-        //     let subtaskIndex = 0;
-        //     subtaskIndex < this.testData.subtasks.length;
-        //     subtaskIndex++
-        // ) {
-        //     const currentResult = task.judgeState.subtasks[subtaskIndex];
-        //     const currentTask = this.testData.subtasks[subtaskIndex];
-        //     const updateCurrentSubtaskScore = () =>
-        //         updateSubtaskScore(subtaskIndex);
-        //     judgeTasks.push(
-        //         (async () => {
-        //             // Type minimum and multiply is skippable, run one by one
-        //             if (currentTask.type !== 'sum') {
-        //                 let skipped: boolean = false;
-        //                 for (
-        //                     let index = 0;
-        //                     index < currentTask.cases.length;
-        //                     index++
-        //                 ) {
-        //                     const currentCaseResult =
-        //                         currentResult.testcases[index];
-        //                     if (skipped) {
-        //                         currentCaseResult.caseStatus =
-        //                             CaseStatus.Skipped;
-        //                     } else {
-        //                         logger.verbose(
-        //                             `Judging ${subtaskIndex}, case ${index}.`,
-        //                         );
-        //                         let score = 0;
-        //                         try {
-        //                             const caseState =
-        //                                 await judgeTestcaseWrapper(
-        //                                     currentTask.cases[index],
-        //                                     async () => {
-        //                                         currentCaseResult.caseStatus =
-        //                                             CaseStatus.Judging;
-        //                                         reportProgress(task);
-        //                                     },
-        //                                 );
-        //                             currentResult.testcases[index] = caseState;
-        //                         } catch (err) {
-        //                             currentCaseResult.caseStatus =
-        //                                 CaseStatus.SystemError;
-        //                             currentCaseResult.errorMessage =
-        //                                 err.toString();
-        //                             logger.warn(
-        //                                 `Task runner error: ${err.toString()} (subtask ${subtaskIndex}, case ${index})`,
-        //                             );
-        //                         }
-        //                         if (
-        //                             score == null ||
-        //                             isNaN(score) ||
-        //                             score === 0
-        //                         ) {
-        //                             logger.debug(
-        //                                 `Subtask ${subtaskIndex}, case ${index}: zero, skipping the rest.`,
-        //                             );
-        //                             skipped = true;
-        //                         }
-        //                         updateCurrentSubtaskScore();
-        //                         reportProgress(task);
-        //                     }
-        //                 }
-        //             } else {
-        //                 // Non skippable, run all immediately
-        //                 const caseTasks: Promise<void>[] = [];
-        //                 for (
-        //                     let index = 0;
-        //                     index < currentTask.cases.length;
-        //                     index++
-        //                 ) {
-        //                     caseTasks.push(
-        //                         (async () => {
-        //                             const currentCaseResult =
-        //                                 currentResult.testcases[index];
-        //                             logger.verbose(
-        //                                 `Judging ${subtaskIndex}, case ${index}.`,
-        //                             );
-        //                             try {
-        //                                 const caseState =
-        //                                     await judgeTestcaseWrapper(
-        //                                         currentTask.cases[index],
-        //                                         async () => {
-        //                                             currentCaseResult.caseStatus =
-        //                                                 CaseStatus.Judging;
-        //                                             reportProgress(task);
-        //                                         },
-        //                                     );
-        //                                 currentResult.testcases[index] =
-        //                                     caseState;
-        //                             } catch (err) {
-        //                                 currentCaseResult.caseStatus =
-        //                                     CaseStatus.SystemError;
-        //                                 currentCaseResult.errorMessage =
-        //                                     err.toString();
-        //                                 logger.warn(
-        //                                     `Task runner error: ${err.toString()} (subtask ${subtaskIndex}, case ${index})`,
-        //                                 );
-        //                             }
-        //                             updateCurrentSubtaskScore();
-        //                             reportProgress(task);
-        //                         })(),
-        //                     );
-        //                 }
-        //                 await Promise.all(caseTasks);
-        //             }
-        //             updateCurrentSubtaskScore();
-        //             logger.verbose(`Subtask ${subtaskIndex}, finished`);
-        //         })(),
-        //     );
-        // }
-        // await Promise.all(judgeTasks);
-        // return task;
     }
 
     protected abstract judgeTestcase(

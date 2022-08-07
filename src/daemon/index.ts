@@ -10,7 +10,6 @@ import {
     type JudgeTask,
     getStatus,
     setStatus,
-    getScore,
 } from './interface/judgeTask.js';
 import { getJSDocReadonlyTag } from 'typescript';
 import globalConfig from './config';
@@ -41,7 +40,7 @@ const taskHandler = async (socket: EventWebSocket, task: JudgeTask) => {
 
     logger.verbose('Done judging.');
     getStatus(task.judgeState);
-    getScore(task);
+    // getScore(task);
 
     reportProgress(socket, task);
     reportResult(socket);

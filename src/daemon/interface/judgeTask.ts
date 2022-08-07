@@ -67,7 +67,7 @@ export type JudgeState = {
 };
 
 export type SubtaskState = {
-    score?: number;
+    score: number;
     testcases: CaseState[];
 };
 
@@ -148,10 +148,3 @@ export const getStatus = (j: JudgeState) => {
             )?.caseStatus as unknown as JudgeStateStatus) ??
             JudgeStateStatus.SystemError;
 };
-
-export function getScore(task: JudgeTask) {
-    task.score = task.judgeState.subtasks.reduce(
-        (prev: number, curr: SubtaskState) => prev + curr.score ?? 0,
-        0,
-    );
-}
