@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "resolveJsonModule": true,
+        "module": "node16",
+        "moduleResolution": "node16",
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceMap": true,
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "target": "es2022",
+        "lib": ["es2015", "es2016", "es2021"]
+    }
+}
