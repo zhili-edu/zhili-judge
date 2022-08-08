@@ -6,48 +6,6 @@ import { RPCReply, RPCReplyType, RPCRequest } from '../interfaces.js';
 import { inspect } from 'util';
 import { randomBytes, randomUUID } from 'crypto';
 
-// export const maxPriority = 5;
-
-/*export async function assertTaskQueue(channel: Channel) {
-    await channel.assertQueue(globalCfg.rabbitMQ.queueName, {
-        maxPriority: maxPriority,
-    });
-}*/
-
-/*export async function waitForTask<T>(
-    conn: Connection,
-    queueName: string,
-    priority: number,
-    retry: (err: Error) => boolean,
-    handle: (task: T) => Promise<void>,
-) {
-    const channel = await conn.createChannel();
-    channel.prefetch(1);
-    await channel.consume(
-        queueName,
-        (msg: Message) => {
-            const data = decode(msg.content) as T;
-            logger.verbose('Got task');
-
-            handle(data).then(
-                async () => {
-                    channel.ack(msg);
-                },
-                async (err) => {
-                    if (retry) await new Promise((res) => setTimeout(res, 300));
-                    logger.warn(
-                        `Failed to process message: ${err.toString()}`,
-                    );
-                    channel.nack(msg, false, retry(err));
-                },
-            );
-        },
-        {
-            priority: priority,
-        },
-    );
-}*/
-
 const connect = async (): Promise<AMQPClient> => {
     logger.verbose('Connecting to RabbitMQ...');
     // const amqpConnection = await connectAmqp(globalCfg.rabbitMQ.url);
@@ -87,6 +45,7 @@ export const runTask = async (
     });
     const replyQueue = await chan.queue(
         `reply.${randomBytes(20).toString('hex')}`,
+        { autoDelete: true },
     );
 
     const replyPromise = new Promise((res, rej) => {
@@ -132,8 +91,6 @@ export const waitForTask = async (
 ) => {
     const chan = await client.channel();
     await chan.prefetch(1);
-    // const channel = connection.createChannel();
-    // channel.prefetch(1);
 
     await chan.queueDeclare(globalCfg.rabbitMQ.queueName, {
         durable: true,
@@ -143,7 +100,9 @@ export const waitForTask = async (
         { noAck: false },
         async (msg: AMQPMessage) => {
             const correlationId = msg.properties.correlationId;
-            const replyQueue = await chan.queue(msg.properties.replyTo);
+            const replyQueue = await chan.queue(msg.properties.replyTo, {
+                autoDelete: true,
+            });
             const req = decode(msg.body) as RPCRequest;
 
             replyQueue.publish(encode({ type: RPCReplyType.Started }));
@@ -193,61 +152,4 @@ export const waitForTask = async (
             await msg.ack();
         },
     );
-
-    /*await channel.consume(
-        globalCfg.rabbitMQ.queueName,
-        async (msg: Message) => {
-            const msgId = msg.properties.messageId;
-            const response = (content: RPCReply) => {
-                channel.sendToQueue(msg.properties.replyTo, encode(content), {
-                    correlationId: msg.properties.correlationId,
-                });
-            };
-
-            logger.info(
-                `Got runner task, correlationId = ${msg.properties.correlationId}`,
-            );
-
-            response({ type: RPCReplyType.Started });
-
-            while (true) {
-                try {
-                    const req = decode(msg.content) as RPCRequest;
-                    const result = await handler(req);
-                    response({ type: RPCReplyType.Finished, result });
-                    break;
-                } catch (err) {
-                    let errorMessage = `Failed to run task ${
-                        msg.properties.correlationId
-                    }: ${err.toString()}, ${err.stack}`;
-                    logger.warn(errorMessage);
-
-                    // Only retry on 'Error: The child process has exited unexpectedly.'
-                    //            or 'Error: The child process has reported the following error: `open(std_input.c_str(), O_RDONLY)`@../native/sandbox.cc,51: No such file or directory'.
-                    if (
-                        errorMessage.indexOf(
-                            'Error: The child process has exited unexpectedly.',
-                        ) !== -1 ||
-                        errorMessage.indexOf(
-                            'open(std_input.c_str(), O_RDONLY)',
-                        ) !== -1
-                    ) {
-                        logger.warn('Retrying.');
-                        continue;
-                    }
-
-                    response({
-                        type: RPCReplyType.Error,
-                        error: err.toString(),
-                    });
-                    break;
-                }
-            }
-
-            channel.ack(msg);
-        },
-        {
-            priority: globalCfg.rabbitMQ.priority,
-        },
-    );*/
 };
