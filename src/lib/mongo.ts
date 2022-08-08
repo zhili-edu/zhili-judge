@@ -36,9 +36,6 @@ export default class Mongo {
     constructor(url: string, name: string, username: string, password: string) {
         this.#client = new MongoClient(
             `mongodb://${username}:${password}@${url}/${name}`,
-            {
-                useUnifiedTopology: true,
-            },
         );
         this.#dbName = name;
     }
@@ -52,6 +49,12 @@ export default class Mongo {
         this.problem = this.db.collection('problem');
     }
 
+    private async getFileSize(fileId: ObjectId): Promise<number> {
+        const files = await this.bucket.find({ _id: fileId }).toArray();
+        if (files.length !== 1) throw new Error('Error Finding Files');
+        return files[0].length;
+    }
+
     async getTest(pid: string): Promise<Test> {
         const prob = await this.problem.findOne({
             _id: new ObjectId(pid),
@@ -61,71 +64,64 @@ export default class Mongo {
             // No TestData
             throw new Error('Can not find Problem TestData');
 
-        prob.test.subtasks = prob.test.subtasks.map((s) => ({
-            ...s,
-            cases: s.cases.map((c) => ({
-                ...c,
-                input: c.input,
-                output: c.output,
+        return {
+            subtasks: prob.test.subtasks.map((s) => ({
+                ...s,
+                cases: s.cases.map((c) => ({
+                    ...c,
+                    input: c.input.toHexString(),
+                    output: c.output.toHexString(),
+                })),
             })),
-        }));
-
-        return { ...prob.test, limit: prob.limit };
-    }
-
-    // return a readable stream
-    getFileStream(fileId: ObjectId): GridFSBucketReadStream {
-        return this.bucket.openDownloadStream(fileId);
+            limit: prob.limit,
+            spj: prob.test.spj,
+            interactor: prob.test.interactor,
+        };
     }
 
     async readFileIdByLength(
-        fileId: ObjectId,
+        fid: string,
         lengthLimit: number,
-        appendPrompt = fileTooLongPrompt,
     ): Promise<string> {
-        if (!fileId) return null;
+        if (!ObjectId.isValid(fid)) throw new Error('Invalid File Id');
+        const fileId = new ObjectId(fid);
 
         const actualSize = await this.getFileSize(fileId);
-        const stream = this.getFileStream(fileId);
+        const stream = this.bucket.openDownloadStream(fileId);
 
         return new Promise((res, rej) => {
             stream.on('readable', () => {
                 const buffer = stream.read(lengthLimit);
                 if (buffer) {
+                    const str = buffer.toString();
                     if (buffer.length < actualSize) {
+                        const omitted = actualSize - buffer.length;
                         res(
-                            buffer.toString() +
-                                '\n' +
-                                appendPrompt(actualSize, buffer.length),
+                            `${str}
+<${omitted} byte${omitted != 1 ? 's' : ''} omitted>`,
                         );
                     } else {
-                        res(buffer.toString());
+                        res(str);
                     }
                 } else {
-                    rej(new Error('Can not read from file'));
+                    // buf is null
+                    // the File is empty
+                    res('');
                 }
             });
         });
     }
 
-    async getFileSize(fileId: ObjectId): Promise<number> {
-        const files = await this.bucket.find({ _id: fileId }).toArray();
-        if (files.length !== 1) throw new Error('Error Finding Files');
-        return files[0].length;
-    }
+    async copyFileTo(fid: string, path: string): Promise<void> {
+        if (!ObjectId.isValid(fid)) throw new Error('Invalid File Id');
+        const fileId = new ObjectId(fid);
 
-    async copyFileTo(fileId: ObjectId, path: string): Promise<void> {
-        const readStream = this.getFileStream(fileId);
+        const readStream = this.bucket.openDownloadStream(fileId);
         const writeStream = fs.createWriteStream(path);
 
-        readStream.pipe(writeStream);
-        return new Promise((fullfilled) => {
-            readStream.on('close', fullfilled);
+        return new Promise((res) => {
+            readStream.on('close', res);
+            readStream.pipe(writeStream);
         });
     }
-}
-
-function fileTooLongPrompt(actualSize: number, bytesRead: number): string {
-    const omitted = actualSize - bytesRead;
-    return `<${omitted} byte${omitted != 1 ? 's' : ''} omitted>`;
 }

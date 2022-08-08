@@ -1,5 +1,3 @@
-import type { ObjectId } from 'mongodb';
-
 export interface RPCRequest {
     type: RPCTaskType;
     task: any;
@@ -33,8 +31,8 @@ export interface CompileTask {
 
 export interface StandardRunTask {
     testDataName: string;
-    inputData: ObjectId;
-    answerData: ObjectId;
+    inputData: string;
+    answerData: string;
     time: number;
     memory: number;
     fileIOInput?: string;

@@ -1,4 +1,3 @@
-import type { ObjectId } from 'mongodb';
 import type { TaskStatus } from '../../interfaces.js';
 
 export enum ProblemType {
@@ -44,6 +43,6 @@ export interface Subtask {
 
 export interface TestCase {
     prefix: string;
-    input: ObjectId;
-    output: ObjectId;
+    input: string;
+    output: string;
 }
