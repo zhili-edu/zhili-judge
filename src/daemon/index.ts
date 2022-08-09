@@ -31,7 +31,6 @@ const taskHandler = async (socket: EventWebSocket, task: JudgeTask) => {
 
     try {
         await judge(task, (task: JudgeTask) => reportProgress(socket, task));
-        console.log('after daemon index', task);
     } catch (err) {
         logger.warn(`Judge error!!! TaskId: ${task.taskId}`, err);
         setStatus(task.judgeState, JudgeStateStatus.SystemError);

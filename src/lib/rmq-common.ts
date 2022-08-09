@@ -92,6 +92,7 @@ export const waitForTask = async (
     const chan = await client.channel();
     await chan.prefetch(1);
 
+    let cnt = 0;
     await chan.queueDeclare(globalCfg.rabbitMQ.queueName, {
         durable: true,
     });
@@ -99,13 +100,15 @@ export const waitForTask = async (
         globalCfg.rabbitMQ.queueName,
         { noAck: false },
         async (msg: AMQPMessage) => {
+            cnt++;
             const correlationId = msg.properties.correlationId;
             const replyQueue = await chan.queue(msg.properties.replyTo, {
                 autoDelete: true,
             });
             const req = decode(msg.body) as RPCRequest;
 
-            replyQueue.publish(encode({ type: RPCReplyType.Started }));
+            await replyQueue.publish(encode({ type: RPCReplyType.Started }));
+
 
             while (true) {
                 const res = await handler(req).then(
@@ -114,7 +117,7 @@ export const waitForTask = async (
                 );
 
                 if (res.success === true) {
-                    replyQueue.publish(
+                    await replyQueue.publish(
                         encode({
                             type: RPCReplyType.Finished,
                             result: res.result,
@@ -138,7 +141,7 @@ export const waitForTask = async (
                         logger.warn('Retrying...');
                         continue;
                     } else {
-                        replyQueue.publish(
+                        await replyQueue.publish(
                             encode({
                                 type: RPCReplyType.Error,
                                 error: res.error.toString(),

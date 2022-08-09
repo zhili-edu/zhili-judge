@@ -53,10 +53,13 @@ const main = async () => {
             logger.warn('Task type unsupported');
             throw new Error(`Task type ${task.type} not supported!`);
         }
-    });
+    }).then(
+        () => logger.info('Runner waitForTask Done. Exiting...'),
+        (e) => logger.error(e),
+    );
 };
 
 main().then(
-    () => logger.verbose('Runner task done.'),
+    () => logger.verbose('Runner Done. Exiting...'),
     (e) => logger.error(e),
 );
