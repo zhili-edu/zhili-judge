@@ -33,11 +33,9 @@ export default class Mongo {
     bucket: GridFSBucket;
     problem: Collection<RawProblem>;
 
-    constructor(url: string, name: string, username: string, password: string) {
-        this.#client = new MongoClient(
-            `mongodb://${username}:${password}@${url}/${name}`,
-        );
-        this.#dbName = name;
+    constructor(url: string) {
+        this.#client = new MongoClient(url);
+        this.#dbName = this.#client.options.dbName;
     }
 
     async connect() {

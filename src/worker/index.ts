@@ -20,12 +20,7 @@ export let redlock: Redlock;
 export let amqp: AMQPClient;
 
 const main = async () => {
-    mongo = new Mongo(
-        globalConfig.mongoDB.url,
-        globalConfig.mongoDB.name,
-        globalConfig.mongoDB.username,
-        globalConfig.mongoDB.password,
-    );
+    mongo = new Mongo(globalConfig.mongoDBUrl);
 
     logger.info('Runner starts.');
     await mongo.connect();

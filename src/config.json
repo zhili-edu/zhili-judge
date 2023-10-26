@@ -8,12 +8,7 @@
         "queueName": "task",
         "priority": 1
     },
-    "mongoDB": {
-        "url": "localhost:27017",
-        "name": "dbName",
-        "username": "dbUsername",
-        "password": "dbPassword"
-    },
+    "mongoDBUrl": "mongodb://localhost:27017",
     "redisUrl": "redis://localhost:6379",
     "sandbox": {
         "chroot": "/path/to/sandbox/rootfs",

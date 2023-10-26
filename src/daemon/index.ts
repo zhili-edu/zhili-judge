@@ -48,12 +48,7 @@ const taskHandler = async (socket: EventWebSocket, task: JudgeTask) => {
 const main = async () => {
     logger.info('Daemon starts.');
 
-    mongo = new Mongo(
-        globalConfig.mongoDB.url,
-        globalConfig.mongoDB.name,
-        globalConfig.mongoDB.username,
-        globalConfig.mongoDB.password,
-    );
+    mongo = new Mongo(globalConfig.mongoDBUrl);
 
     logger.info('Connecting to MongoDB...');
     await mongo.connect();
