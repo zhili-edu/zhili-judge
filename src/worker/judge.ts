@@ -211,10 +211,22 @@ export async function judgeStandard(
         // Copy input file to workingDir
         if (task.inputData != null) {
             logger.debug('Copying input file...');
-            await mongo.copyFileTo(
-                task.inputData,
-                path.join(workingDir, inputFileName),
-            );
+            try {
+                await mongo.copyFileTo(
+                    task.inputData,
+                    path.join(workingDir, inputFileName),
+                );
+            } catch (e) {
+                return {
+                    time: 0,
+                    memory: 0,
+                    userOutput: '',
+                    userError: '',
+                    scoringRate: 0,
+                    spjMessage: '',
+                    result: TestcaseResultType.FileError,
+                };
+            }
         }
 
         // get binary from where it's compiled
@@ -309,10 +321,22 @@ export async function judgeStandard(
         } else {
             // copy answerFile to workingDir
             if (task.answerData != null)
-                await mongo.copyFileTo(
-                    task.answerData,
-                    path.join(spjWorkingDir, 'answer'),
-                );
+                try {
+                    await mongo.copyFileTo(
+                        task.answerData,
+                        path.join(spjWorkingDir, 'answer'),
+                    );
+                } catch (e) {
+                    return {
+                        time: 0,
+                        memory: 0,
+                        userOutput: '',
+                        userError: '',
+                        scoringRate: 0,
+                        spjMessage: '',
+                        result: TestcaseResultType.FileError,
+                    };
+                }
 
             // problem with spj
             if (task.spjExecutableName != null) {
