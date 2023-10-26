@@ -12,9 +12,6 @@ import {
     TestcaseResultType,
     StandardRunTask,
     StandardRunResult,
-    InteractionRunTask,
-    AnswerSubmissionRunTask,
-    AnswerSubmissionRunResult,
 } from '../interfaces.js';
 import {
     createOrEmptyDir,

@@ -3,7 +3,6 @@ import {
     GridFSBucket,
     ObjectId,
     type Db,
-    type GridFSBucketReadStream,
     type Collection,
 } from 'mongodb';
 import * as fs from 'fs';
@@ -87,7 +86,7 @@ export default class Mongo {
         const actualSize = await this.getFileSize(fileId);
         const stream = this.bucket.openDownloadStream(fileId);
 
-        return new Promise((res, rej) => {
+        return new Promise((res) => {
             stream.on('readable', () => {
                 const buffer = stream.read(lengthLimit);
                 if (buffer) {
@@ -113,6 +112,9 @@ export default class Mongo {
     async copyFileTo(fid: string, path: string): Promise<void> {
         if (!ObjectId.isValid(fid)) throw new Error('Invalid File Id');
         const fileId = new ObjectId(fid);
+
+        const file = await this.bucket.find({ _id: fileId }).toArray();
+        if (file.length !== 1) throw new Error('Fild Not Found');
 
         const readStream = this.bucket.openDownloadStream(fileId);
         const writeStream = fs.createWriteStream(path);
