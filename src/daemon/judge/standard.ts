@@ -103,26 +103,34 @@ export class StandardJudger extends JudgerBase {
             spjExecutableName: this.spjExecutableName,
         };
 
-        const [inputContent, outputContent, runResult]: [
-            string,
-            string,
-            StandardRunResult,
-        ] = await Promise.all([
-            mongo.readFileIdByLength(
-                curCase.input,
-                globalConfig.worker.dataDisplayLimit,
-            ),
-            mongo.readFileIdByLength(
-                curCase.output,
-                globalConfig.worker.dataDisplayLimit,
-            ),
-            runTask(
-                amqp,
-                { type: RPCTaskType.RunStandard, task: task },
-                this.priority,
-                started,
-            ),
-        ]);
+        const runResult: StandardRunResult = await runTask(
+            amqp,
+            { type: RPCTaskType.RunStandard, task: task },
+            this.priority,
+            started,
+        );
+
+        let inputContent: string;
+        let outputContent: string;
+        if (
+            runResult.result === TestcaseResultType.FileError ||
+            runResult.result === TestcaseResultType.JudgementFailed ||
+            runResult.result === TestcaseResultType.InvalidInteraction
+        ) {
+            inputContent = '';
+            outputContent = '';
+        } else {
+            [inputContent, outputContent] = await Promise.all([
+                mongo.readFileIdByLength(
+                    curCase.input,
+                    globalConfig.worker.dataDisplayLimit,
+                ),
+                mongo.readFileIdByLength(
+                    curCase.output,
+                    globalConfig.worker.dataDisplayLimit,
+                ),
+            ]);
+        }
 
         return {
             prefix: curCase.prefix,
