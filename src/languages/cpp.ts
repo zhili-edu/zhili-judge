@@ -9,9 +9,9 @@ export const lang = {
         // To customize the compilation process,
         // write a shell script or some other stuff,
         // and put it to your sandbox.
-        executable: '/usr/bin/g++-8',
+        executable: '/usr/bin/g++',
         parameters: [
-            'g++-8',
+            'g++',
             sourcePath,
             '-o',
             `${outputDirectory}/a.out`,
@@ -19,7 +19,7 @@ export const lang = {
             '-O2',
             '-fdiagnostics-color=always',
             '-DONLINE_JUDGE',
-            !doNotUseX32Abi && '-mx32'
+            !doNotUseX32Abi && '-mx32',
         ].filter((x) => x),
         time: 5000,
         memory: 1024 * 1024 * 1024 * 2,
@@ -33,7 +33,7 @@ export const lang = {
         stderr: `${outputDirectory}/message.txt`,
         // We will read this file for message in the output directory.
         messageFile: 'message.txt',
-        workingDirectory: outputDirectory
+        workingDirectory: outputDirectory,
     }),
 
     run: (
@@ -43,7 +43,7 @@ export const lang = {
         memory: number,
         stdinFile = null,
         stdoutFile = null,
-        stderrFile = null
+        stderrFile = null,
     ) => ({
         executable: `${binaryDirectory}/a.out`,
         parameters: [],
@@ -54,6 +54,6 @@ export const lang = {
         stdin: stdinFile,
         stdout: stdoutFile,
         stderr: stderrFile,
-        workingDirectory: workingDirectory
-    })
+        workingDirectory: workingDirectory,
+    }),
 };

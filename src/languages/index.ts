@@ -20,7 +20,7 @@ export interface Language {
     compile: (
         sourcePath: string,
         outputDirectory: string,
-        doNotUseX32Abi: boolean
+        doNotUseX32Abi: boolean,
     ) => ExecParam;
     run: (
         binaryDirectory: string,
@@ -29,28 +29,28 @@ export interface Language {
         memory: number,
         stdinFile?: string | number,
         stdoutFile?: string | number,
-        stderrFile?: string | number
+        stderrFile?: string | number,
     ) => ExecParam;
 }
 
 export const languages: Language[] = [
     require('./cpp'),
-    require('./cpp11'),
-    require('./cpp17'),
-    require('./cpp-noilinux'),
-    require('./cpp11-noilinux'),
-    require('./cpp11-clang'),
-    require('./cpp17-clang'),
-    require('./c'),
-    require('./c-noilinux'),
-    require('./csharp'),
-    require('./haskell'),
-    require('./java'),
-    require('./nodejs'),
-    require('./pascal'),
-    require('./python2'),
-    require('./python3'),
-    require('./ruby')
+    // require('./cpp11'),
+    // require('./cpp17'),
+    // require('./cpp-noilinux'),
+    // require('./cpp11-noilinux'),
+    // require('./cpp11-clang'),
+    // require('./cpp17-clang'),
+    // require('./c'),
+    // require('./c-noilinux'),
+    // require('./csharp'),
+    // require('./haskell'),
+    // require('./java'),
+    // require('./nodejs'),
+    // require('./pascal'),
+    // require('./python2'),
+    // require('./python3'),
+    // require('./ruby'),
     // The following languages are dropped now since almost nobody uses them in LibreOJ.
     // They won't be maintained and use it at your own risk!
     /*
