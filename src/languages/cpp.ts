@@ -20,6 +20,8 @@ export const lang = {
             '-O2',
             '-fdiagnostics-color=always',
             '-DONLINE_JUDGE',
+            '-Wall',
+            '-Wextra',
             !doNotUseX32Abi && '-mx32',
         ].filter((x) => x),
         time: 5000,

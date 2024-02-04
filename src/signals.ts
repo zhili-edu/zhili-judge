@@ -30,5 +30,5 @@ export const signals = [
     'Window changed', // 28
     'I/O possible', // 29
     'Power failure', // 30
-    'Bad system call' // 31
+    'Bad system call', // 31
 ];
