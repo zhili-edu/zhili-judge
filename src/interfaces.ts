@@ -1,61 +1,14 @@
-export interface RPCRequest {
-    type: RPCTaskType;
-    task: any;
-}
-
-export interface RPCReply {
-    type: RPCReplyType;
-    result?: any;
-    error?: string;
-}
-
-export enum RPCTaskType {
-    Compile = 1,
-    RunStandard = 2,
-    RunSubmitAnswer = 3,
-    RunInteraction = 4,
-}
-
-export enum RPCReplyType {
-    Started = 1,
-    Finished = 2,
-    Error = 3,
-}
-
-export interface CompileTask {
-    code: string;
-    language: string;
-    extraFiles: FileContent[];
-    binaryName: string;
-}
-
 export interface StandardRunTask {
-    testDataName: string;
     inputData: string;
     answerData: string;
+
+    lang: string;
     time: number;
     memory: number;
+
     fileIOInput?: string;
     fileIOOutput?: string;
     userExecutableName: string;
-    spjExecutableName?: string;
-}
-
-export interface InteractionRunTask {
-    testDataName: string;
-    inputData: string;
-    answerData: string;
-    time: number;
-    memory: number;
-    userExecutableName: string;
-    interactorExecutableName: string;
-}
-
-export interface AnswerSubmissionRunTask {
-    testDataName: string;
-    inputData: string;
-    answerData: string;
-    userAnswer: Buffer;
     spjExecutableName?: string;
 }
 
@@ -78,30 +31,9 @@ export interface TestcaseResult {
     errorMessage?: string;
 }
 
-export interface SubtaskResult {
-    score?: number;
-    cases: TestcaseResult[];
-}
-
 export enum ErrorType {
     SystemError,
     TestDataError,
-}
-
-export interface CompilationResult {
-    status: TaskStatus;
-    message?: string;
-}
-
-export interface JudgeResult {
-    subtasks?: SubtaskResult[];
-}
-
-export interface OverallResult {
-    error?: ErrorType;
-    systemMessage?: string;
-    compile?: CompilationResult;
-    judge?: JudgeResult;
 }
 
 export interface StandardRunResult {
@@ -110,14 +42,9 @@ export interface StandardRunResult {
     userOutput: string;
     userError: string;
     scoringRate: number;
+
     spjMessage: string;
     systemMessage?: string;
-    result: TestcaseResultType;
-}
-
-export interface AnswerSubmissionRunResult {
-    scoringRate: number;
-    spjMessage: string;
     result: TestcaseResultType;
 }
 
@@ -147,24 +74,56 @@ export interface FileContent {
     name: string;
 }
 
-/*export enum ProgressReportType {
-    Started = 1,
-    Compiled = 2,
-    Progress = 3,
-    Finished = 4,
-    Reported = 5,
+export type JudgeStatus =
+    | 'in_queue'
+    | 'compiling'
+    | 'judging'
+    | 'accepted'
+    | 'wrong_answer'
+    | 'runtime_error'
+    | 'compile_error'
+    | 'time_limit_exceeded'
+    | 'memory_limit_exceeded'
+    | 'judgement_failed';
+
+export type CaseStatus =
+    | 'waiting'
+    | 'judging'
+    | 'accepted'
+    | 'wrong_answer'
+    | 'runtime_error'
+    | 'time_limit_exceeded'
+    | 'memory_limit_exceeded'
+    | 'judgement_failed';
+
+export interface CaseEmit {
+    num: number;
+
+    time_usage: number;
+    memory_usage: number;
+    case_status: CaseStatus | null;
+
+    user_in: string | null;
+    user_out: string | null;
+    user_error: string | null;
+    answer_out: string | null;
+    spj_message: string | null;
+    system_message: string | null;
 }
 
-export interface ProgressReportData {
-    taskId: string;
-    type: ProgressReportType;
-    progress: OverallResult | CompilationResult;
-}*/
+export interface SubtaskEmit {
+    cases: CaseEmit[];
 
-export interface SerializedBuffer {
-    type: string;
-    data: Uint8Array;
+    score: number;
+    kind: 'sum' | 'min';
 }
 
-export const redisBinarySuffix = '-bin';
-export const redisMetadataSuffix = '-meta';
+export interface SubmissionUpdate {
+    score: number;
+    judge_status: JudgeStatus;
+    time_usage: number;
+    memory_usage: number;
+    error_message: string | null;
+
+    subtasks: SubtaskEmit[];
+}
