@@ -328,7 +328,7 @@ const main = async () => {
         ]),
     ]);
 
-    const sql = postgres(process.env.DATABASE_URL, {});
+    const sql = postgres(process.env.DATABASE_URL, { ssl: 'prefer' });
 
     const client = new OSS({
         region: process.env.OSS_REGION,
