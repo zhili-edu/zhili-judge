@@ -14,10 +14,10 @@ function getSystemExecutable(program: string) {
         : `/usr/bin/${program}`;
 }
 
-export const createOrEmptyDir = async (path: string): Promise<void> =>
-    rm(path, { recursive: true, force: true }).then(() => {
-        mkdir(path, { recursive: true });
-    });
+export const createOrEmptyDir = async (path: string): Promise<void> => {
+    await rm(path, { recursive: true, force: true });
+    await mkdir(path, { recursive: true });
+};
 
 export async function setWriteAccess(
     dirName: string,
@@ -27,8 +27,7 @@ export async function setWriteAccess(
         globalConfig.sandbox.chroot,
         globalConfig.sandbox.user,
     );
-    const uid = writeAccess ? user.uid : process.getuid(),
-        gid = writeAccess ? user.gid : process.getgid();
+    const uid = writeAccess ? user.uid : process.getuid();
     await Promise.all([
         execFileAsync('/bin/chmod', ['-R', '755', '--', dirName]),
         execFileAsync('/bin/chown', ['-R', `${uid}:${uid}`, '--', dirName]),

@@ -26,7 +26,7 @@ const pollSubmission = async (
     memory_limit: number;
     objectNames: string[];
 }> => {
-    while (true) {
+    for (;;) {
         const [data] = await sql<
             [{ id: string; code: string; lang: string; problem_id: string }?]
         >`
@@ -339,7 +339,7 @@ const main = async () => {
 
     logger.info('Judger start.');
 
-    while (true) {
+    for (;;) {
         await sql
             .begin(async (sql) => {
                 const {
@@ -364,10 +364,11 @@ const main = async () => {
                     await notify(sid, sql);
                     logger.debug('compile notify');
 
-                    const executableName = `bin-${lang}-${createHash('sha256')
+                    const codeHash = createHash('sha256')
                         .update(code)
                         .digest()
-                        .toString('hex')}`;
+                        .toString('hex');
+                    const executableName = `bin-${lang}-${codeHash}`;
                     const [compileResult, dataMap] = await Promise.all([
                         compile({
                             code,
@@ -459,4 +460,5 @@ const main = async () => {
     }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 main();
