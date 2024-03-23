@@ -11,6 +11,7 @@ import config from './config.json';
 import { mkdir, stat } from 'fs/promises';
 import { readFileLength } from './utils';
 import { notify } from './lib/notify';
+import { dirname } from 'path';
 
 const sem = new Semaphore(4);
 const semNumbers = Array.from({ length: 4 }, (_, idx) => idx);
@@ -76,21 +77,30 @@ const pollSubmission = async (
     }
 };
 
-const downloadTestData = (oss: OSS, objectNames: string[]) =>
-    Promise.all(
-        objectNames.map((name) =>
-            stat(`${config.tmpDir}/data/${name}`)
-                .then(
-                    () => null,
-                    () => oss.get(name, `${config.tmpDir}/data/${name}`),
-                )
-                .then(() => readFileLength(`${config.tmpDir}/data/${name}`, 50))
-                .then(
-                    (content) => [name, content] as const,
-                    () => [name, ''] as const,
-                ),
-        ),
-    ).then((entries) => new Map(entries));
+const downloadTestData = async (
+    oss: OSS,
+    objectNames: string[],
+): Promise<Map<string, string>> => {
+    const fileContents = await Promise.all(
+        objectNames.map(async (name) => {
+            const filename = `${config.tmpDir}/data/${name}`;
+            try {
+                await stat(filename);
+            } catch (_) {
+                // file do not exist
+                const path = dirname(filename);
+                await mkdir(path, { recursive: true });
+
+                await oss.get(name, filename);
+            }
+
+            const content = await readFileLength(filename, 50);
+            return [name, content] as const;
+        }),
+    );
+
+    return new Map(fileContents);
+};
 
 const createSubtaskResults = async (
     sid: string,
