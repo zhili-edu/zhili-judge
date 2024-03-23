@@ -77,6 +77,8 @@ export async function judgeStandard(
                 `${workingDir}/${inputFileName}`,
             );
         } catch (e) {
+            logger.error(e);
+
             return {
                 time: 0,
                 memory: 0,
