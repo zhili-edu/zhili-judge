@@ -202,13 +202,24 @@ const judgeSubtask = async (
         cases.map((c) =>
             sem.runExclusive(async () => {
                 const num = semNumbers.pop();
-                const result = await judgeCase(
-                    { sid, time_limit, memory_limit, lang, executableName },
-                    c,
-                    num,
-                    sql,
-                );
-                semNumbers.push(num);
+                let result: { status: string; time: number; memory: number } = {
+                    status: 'judgement_failed',
+                    time: 0,
+                    memory: 0,
+                };
+
+                try {
+                    result = await judgeCase(
+                        { sid, time_limit, memory_limit, lang, executableName },
+                        c,
+                        num,
+                        sql,
+                    );
+                } catch (e) {
+                    logger.error(e);
+                } finally {
+                    semNumbers.push(num);
+                }
 
                 return result;
             }),
