@@ -18,8 +18,7 @@
         "build": "tsc -d -p .",
         "build:watch": "tsc -w -d -p .",
         "lint": "eslint ./src",
-        "daemon": "node ./dist/daemon/index.js",
-        "worker": "node ./dist/worker/index.js"
+        "run": "node ./dist/index.js"
     },
     "devDependencies": {
         "@types/ali-oss": "^6.16.11",
