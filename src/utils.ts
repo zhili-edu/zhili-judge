@@ -78,3 +78,5 @@ export async function readFileLength(
         await file?.close();
     }
 }
+
+export const sanitizeDbString = (str: string) => str.replaceAll('\0', '');

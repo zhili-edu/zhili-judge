@@ -9,7 +9,7 @@ import logger from './lib/logger';
 import { Semaphore } from 'async-mutex';
 import config from './config.json';
 import { mkdir, stat } from 'fs/promises';
-import { readFileLength } from './utils';
+import { readFileLength, sanitizeDbString } from './utils';
 import { notify } from './lib/notify';
 import { dirname } from 'path';
 import { type Language, getLanguage } from './languages';
@@ -327,9 +327,9 @@ const judgeCase = async (
         UPDATE case_results
         SET time_usage = ${time},
         memory_usage = ${memory},
-        user_out = ${userOutput},
-        user_error = ${userError},
-        system_message = ${systemMessage},
+        user_out = ${sanitizeDbString(userOutput)},
+        user_error = ${sanitizeDbString(userError)},
+        system_message = ${systemMessage ? sanitizeDbString(systemMessage) : null},
         status = ${status}
         WHERE id = ${result_id};
     `;
