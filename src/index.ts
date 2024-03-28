@@ -4,7 +4,7 @@ import { compile } from './compile';
 import OSS from 'ali-oss';
 import { judgeStandard } from './judge';
 import { createHash } from 'crypto';
-import postgres from 'postgres';
+import postgres, { PostgresError } from 'postgres';
 import logger from './lib/logger';
 import { Semaphore } from 'async-mutex';
 import config from './config.json';
@@ -360,7 +360,11 @@ const main = async () => {
 
     logger.info('Judger start.');
 
+    let currentSid: string | null = null;
+
     for (;;) {
+        currentSid = null;
+
         await sql
             .begin(async (sql) => {
                 const {
@@ -372,6 +376,8 @@ const main = async () => {
                     time_limit,
                     memory_limit,
                 } = await pollSubmission(sql);
+                currentSid = sid;
+
                 try {
                     logger.info({ sid }, 'submission polled');
 
@@ -469,14 +475,23 @@ const main = async () => {
                     await notify(sid, sql);
                     logger.debug('done notify');
                 } catch (e) {
+                    if (e instanceof PostgresError) {
+                        throw e;
+                    }
+
                     logger.error(e);
 
                     await sql`UPDATE submissions SET status = 'judgement_failed' WHERE id = ${sid};`;
                 }
             })
-            .catch((e) => {
+            .catch(async (e) => {
+                // Postgres Error
+
                 logger.error(e.message);
                 logger.error(e.stack);
+
+                if (currentSid)
+                    await sql`UPDATE submissions SET status = 'judgement_failed' WHERE id = ${currentSid};`;
             });
     }
 };
