@@ -40,9 +40,9 @@ export async function runDiff(
         time: config.worker.spjTimeLimit,
         memory: config.worker.spjMemoryLimit * 1024 * 1024,
         process: 2,
-        stdin: null,
+        stdin: undefined,
         stdout: outputFileName,
-        stderr: null,
+        stderr: undefined,
         workingDirectory: tmpPath,
         mounts: [
             {
@@ -123,25 +123,21 @@ export async function runProgram(
         logger.trace(d.name);
     }
 
-    let result: SandboxResult = null;
     const sandbox = startSandbox(sandboxParam);
     return [
         (async () => {
-            result = await sandbox.waitForStop();
+            const result = await sandbox.waitForStop();
 
-            let ole = false;
+            let outputLimitExceeded = false;
             const outputSize = await getSize(dataDir);
             if (outputSize > config.worker.outputLimit) {
                 await rm(dataDir, { recursive: true }).then(() =>
                     mkdir(dataDir),
                 );
-                ole = true;
+                outputLimitExceeded = true;
             }
 
-            return {
-                outputLimitExceeded: ole,
-                result: result,
-            };
+            return { outputLimitExceeded, result };
         })(),
         () => {
             sandbox.stop();

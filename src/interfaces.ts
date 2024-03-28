@@ -1,15 +1,14 @@
+import type { Language } from './languages';
+
 export interface StandardRunTask {
     inputData: string;
     answerData: string;
 
-    lang: string;
     time: number;
     memory: number;
 
-    fileIOInput?: string;
-    fileIOOutput?: string;
+    lang: Language;
     userExecutableName: string;
-    spjExecutableName?: string;
 }
 
 export interface TestcaseDetails {
@@ -36,17 +35,15 @@ export enum ErrorType {
     TestDataError,
 }
 
-export interface StandardRunResult {
+export type StandardRunResult = {
     time: number;
     memory: number;
     userOutput: string;
     userError: string;
-    scoringRate: number;
 
-    spjMessage: string;
-    systemMessage?: string;
+    systemMessage: string | null;
     result: TestcaseResultType;
-}
+};
 
 export enum TaskStatus {
     Waiting = 0,

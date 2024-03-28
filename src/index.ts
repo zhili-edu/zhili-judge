@@ -12,6 +12,7 @@ import { mkdir, stat } from 'fs/promises';
 import { readFileLength } from './utils';
 import { notify } from './lib/notify';
 import { dirname } from 'path';
+import { type Language, getLanguage } from './languages';
 
 const sem = new Semaphore(4);
 const semNumbers = Array.from({ length: 4 }, (_, idx) => idx);
@@ -143,7 +144,7 @@ const judgeSubtask = async (
         dataMap,
     }: {
         sid: string;
-        lang: string;
+        lang: Language;
         time_limit: number;
         memory_limit: number;
         executableName: string;
@@ -202,6 +203,10 @@ const judgeSubtask = async (
         cases.map((c) =>
             sem.runExclusive(async () => {
                 const num = semNumbers.pop();
+                if (num === undefined) {
+                    throw new Error('[Semaphore] num is undefined');
+                }
+
                 let result: { status: string; time: number; memory: number } = {
                     status: 'judgement_failed',
                     time: 0,
@@ -259,7 +264,7 @@ const judgeCase = async (
         executableName,
     }: {
         sid: string;
-        lang: string;
+        lang: Language;
         time_limit: number;
         memory_limit: number;
         executableName: string;
@@ -324,7 +329,7 @@ const judgeCase = async (
         memory_usage = ${memory},
         user_out = ${userOutput},
         user_error = ${userError},
-        system_message = ${systemMessage ?? null},
+        system_message = ${systemMessage},
         status = ${status}
         WHERE id = ${result_id};
     `;
@@ -336,6 +341,18 @@ const judgeCase = async (
 };
 
 const main = async () => {
+    const databaseUrl = process.env.DATABASE_URL;
+    const accessKeyId = process.env.OSS_ACCESS_KEY_ID;
+    const accessKeySecret = process.env.OSS_ACCESS_KEY_SECRET;
+    const region = process.env.OSS_REGION;
+    const bucket = process.env.OSS_BUCKET;
+
+    if (!databaseUrl) throw new Error('env var DATABASE_URL');
+    if (!accessKeyId) throw new Error('env var OSS_ACCESS_KEY_ID');
+    if (!accessKeySecret) throw new Error('env var OSS_ACCESS_KEY_SECRET');
+    if (!region) throw new Error('env var OSS_REGION');
+    if (!bucket) throw new Error('env var OSS_BUCKET');
+
     await Promise.all([
         mkdir(`${config.tmpDir}/data`, { recursive: true }),
         mkdir(`${config.tmpDir}/bin`, { recursive: true }),
@@ -349,19 +366,12 @@ const main = async () => {
         ]),
     ]);
 
-    const sql = postgres(process.env.DATABASE_URL, { ssl: 'prefer' });
-
-    const client = new OSS({
-        region: process.env.OSS_REGION,
-        accessKeyId: process.env.OSS_ACCESS_KEY_ID,
-        accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
-        bucket: process.env.OSS_BUCKET,
-    });
+    const sql = postgres(databaseUrl, { ssl: 'prefer' });
+    const client = new OSS({ region, accessKeyId, accessKeySecret, bucket });
 
     logger.info('Judger start.');
 
     let currentSid: string | null = null;
-
     for (;;) {
         currentSid = null;
 
@@ -370,7 +380,7 @@ const main = async () => {
                 const {
                     sid,
                     code,
-                    lang,
+                    lang: langName,
                     objectNames,
                     test_id,
                     time_limit,
@@ -380,8 +390,9 @@ const main = async () => {
 
                 try {
                     logger.info({ sid }, 'submission polled');
+                    const lang = getLanguage(langName);
 
-                    if (objectNames.length === 0) {
+                    if (objectNames.length === 0 || lang === undefined) {
                         await sql`UPDATE submissions SET status = 'judgement_failed' WHERE id = ${sid};`;
                         await notify(sid, sql);
                         return;
@@ -397,11 +408,7 @@ const main = async () => {
                         .toString('hex');
                     const executableName = `bin-${lang}-${codeHash}`;
                     const [compileResult, dataMap] = await Promise.all([
-                        compile({
-                            code,
-                            language: lang,
-                            binaryName: executableName,
-                        }),
+                        compile({ code, lang, binaryName: executableName }),
                         downloadTestData(client, objectNames).catch(
                             () => new Map<string, string>(),
                         ),

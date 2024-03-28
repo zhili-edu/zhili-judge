@@ -1,7 +1,7 @@
 import path from 'path';
 import { writeFile } from 'fs/promises';
 import { TaskStatus } from './interfaces.js';
-import { getLanguage } from './languages/index.js';
+import type { Language } from './languages/index.js';
 import {
     startSandbox,
     SandboxStatus,
@@ -11,14 +11,14 @@ import {
 import {
     getFolderSize as getSize,
     readFileLength,
-    createOrEmptyDir,
+    createEmptyDir,
     setWriteAccess,
 } from './utils.js';
 import config from './config.json';
 
 export interface CompileTask {
     code: string;
-    language: string;
+    lang: Language;
     binaryName: string;
 }
 
@@ -27,15 +27,19 @@ export interface CompilationResult {
     message: string;
 }
 
-export async function compile(task: CompileTask): Promise<CompilationResult> {
+export async function compile({
+    code,
+    lang,
+    binaryName,
+}: CompileTask): Promise<CompilationResult> {
     const srcDir = `${config.tmpDir}/src`;
-    const binDir = `${config.tmpDir}/bin/${task.binaryName}`;
+    const binDir = `${config.tmpDir}/bin/${binaryName}`;
     const tempDir = `${config.tmpDir}/temp`;
 
     await Promise.all([
-        createOrEmptyDir(srcDir),
-        createOrEmptyDir(binDir),
-        createOrEmptyDir(tempDir),
+        createEmptyDir(srcDir),
+        createEmptyDir(binDir),
+        createEmptyDir(tempDir),
     ]);
     await Promise.all([
         setWriteAccess(srcDir, false),
@@ -43,15 +47,14 @@ export async function compile(task: CompileTask): Promise<CompilationResult> {
         setWriteAccess(tempDir, true),
     ]);
 
-    const language = getLanguage(task.language);
-    await writeFile(`${srcDir}/${language.sourceFileName}`, task.code, {
+    await writeFile(`${srcDir}/${lang.sourceFileName}`, code, {
         encoding: 'utf8',
     });
 
     const srcDir_Sandbox = '/sandbox0/1';
     const binDir_Sandbox = '/sandbox0/2';
-    const compileConfig = language.compile(
-        `${srcDir_Sandbox}/${language.sourceFileName}`,
+    const compileConfig = lang.compile(
+        `${srcDir_Sandbox}/${lang.sourceFileName}`,
         binDir_Sandbox,
         config.worker.doNotUseX32ABI,
     );
@@ -88,7 +91,7 @@ export async function compile(task: CompileTask): Promise<CompilationResult> {
         if (sandboxResult.code === 0) {
             const outputSize = await getSize(binDir);
             // If the output is too long
-            if (outputSize > language.binarySizeLimit) {
+            if (outputSize > lang.binarySizeLimit) {
                 return {
                     status: TaskStatus.Failed,
                     message: `Your source code compiled to ${outputSize} bytes which is too big...`,

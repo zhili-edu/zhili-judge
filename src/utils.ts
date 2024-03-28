@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { readFile, open, type FileHandle, mkdir, rm } from 'fs/promises';
+import { open, type FileHandle, mkdir, rm } from 'fs/promises';
 import { promisify } from 'util';
 import { exec, execFile } from 'child_process';
 import { getUidAndGidInSandbox } from 'simple-sandbox';
@@ -14,7 +14,7 @@ function getSystemExecutable(program: string) {
         : `/usr/bin/${program}`;
 }
 
-export const createOrEmptyDir = async (path: string): Promise<void> => {
+export const createEmptyDir = async (path: string): Promise<void> => {
     await rm(path, { recursive: true, force: true });
     await mkdir(path, { recursive: true });
 };
@@ -52,39 +52,12 @@ export function fileTooLongPrompt(
     return `<${omitted} byte${omitted != 1 ? 's' : ''} omitted>`;
 }
 
-export async function tryReadFile(
-    path: string,
-    encoding: BufferEncoding = 'utf8',
-): Promise<string> {
-    let fileContent = null;
-    try {
-        fileContent = await readFile(path, encoding);
-    } catch (e) {
-        if (e.code !== 'ENOENT') {
-            throw e;
-        }
-    }
-    return fileContent;
-}
-
-export function readBufferLength(
-    buf: Buffer,
-    lengthLimit: number,
-    appendPrompt = fileTooLongPrompt,
-): string {
-    let content = buf.toString('utf8', 0, lengthLimit);
-    if (buf.length > lengthLimit) {
-        content += '\n' + appendPrompt(buf.length, lengthLimit);
-    }
-    return content;
-}
-
 export async function readFileLength(
     path: string,
     lengthLimit: number,
     appendPrompt = fileTooLongPrompt,
-): Promise<string | null> {
-    let file: FileHandle;
+): Promise<string> {
+    let file: FileHandle | null = null;
     try {
         file = await open(path);
 
@@ -100,7 +73,7 @@ export async function readFileLength(
 
         return ret;
     } catch (e) {
-        return null;
+        return '';
     } finally {
         await file?.close();
     }

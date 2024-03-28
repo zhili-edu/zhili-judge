@@ -1,7 +1,5 @@
 import crypto from 'crypto';
-import path from 'path';
 import mainLogger from './lib/logger';
-import { inspect } from 'util';
 import { rename, copyFile } from 'fs/promises';
 
 import { SandboxStatus } from 'simple-sandbox';
@@ -10,11 +8,20 @@ import {
     StandardRunTask,
     StandardRunResult,
 } from './interfaces.js';
-import { createOrEmptyDir, readFileLength } from './utils.js';
+import { createEmptyDir, readFileLength } from './utils.js';
 import config from './config.json';
 import { runProgram, runDiff } from './run.js';
 import { signals } from './signals.js';
-import { getLanguage } from './languages';
+
+const JUDGE_FAIL: StandardRunResult = {
+    time: 0,
+    memory: 0,
+    userOutput: '',
+    userError: '',
+
+    systemMessage: null,
+    result: TestcaseResultType.JudgementFailed,
+};
 
 export async function judgeStandard(
     num: number,
@@ -29,178 +36,126 @@ export async function judgeStandard(
 
     logger.debug('Creating directories...');
     await Promise.all([
-        createOrEmptyDir(workingDir),
-        createOrEmptyDir(spjWorkingDir),
+        createEmptyDir(workingDir),
+        createEmptyDir(spjWorkingDir),
     ]);
 
-    let stdinRedirectionName,
-        inputFileName,
-        stdoutRedirectionName,
-        outputFileName;
-
-    const tempErrFile = crypto.randomBytes(5).toString('hex') + '.err';
-
-    if (task.fileIOInput != null) {
-        // problem with fileIO
-        inputFileName = task.fileIOInput;
-        stdinRedirectionName = null;
-    } else {
-        // problem with input
-        if (task.inputData != null) {
-            stdinRedirectionName = inputFileName =
-                crypto.randomBytes(5).toString('hex') + '.in';
-        } else {
-            stdinRedirectionName = inputFileName = null;
-        }
-    }
-
-    if (task.fileIOOutput != null) {
-        outputFileName = task.fileIOOutput;
-        stdoutRedirectionName = null;
-    } else {
-        stdoutRedirectionName = outputFileName =
-            crypto.randomBytes(10).toString('hex') + '.out';
-    }
+    const stdinFile = `${crypto.randomBytes(5).toString('hex')}.in`;
+    const stdoutFile = `${crypto.randomBytes(5).toString('hex')}.out`;
+    const stderrFile = `${crypto.randomBytes(5).toString('hex')}.err`;
 
     // Copy input file to workingDir
-    if (task.inputData != null) {
+    try {
         logger.debug(
             {
                 from: `${config.tmpDir}/data/${task.inputData}`,
-                to: `${workingDir}/${inputFileName}`,
+                to: `${workingDir}/${stdinFile}`,
             },
             'Copying input file...',
         );
-        try {
-            await copyFile(
-                `${config.tmpDir}/data/${task.inputData}`,
-                `${workingDir}/${inputFileName}`,
-            );
-        } catch (e) {
-            logger.error(e);
+        await copyFile(
+            `${config.tmpDir}/data/${task.inputData}`,
+            `${workingDir}/${stdinFile}`,
+        );
+    } catch (e) {
+        logger.error(e);
 
-            return {
-                time: 0,
-                memory: 0,
-                userOutput: '',
-                userError: '',
-                scoringRate: 0,
-                spjMessage: '',
-                result: TestcaseResultType.FileError,
-            };
-        }
+        return JUDGE_FAIL;
     }
 
     logger.debug('Running user program...');
     const [resultPromise] = await runProgram(
         num,
-        getLanguage(task.lang),
+        task.lang,
         `${config.tmpDir}/bin/${task.userExecutableName}`,
         workingDir,
         task.time,
         task.memory * 1024 * 1024,
-        stdinRedirectionName,
-        stdoutRedirectionName,
-        tempErrFile,
+        stdinFile,
+        stdoutFile,
+        stderrFile,
     );
-    const runResult = await resultPromise;
 
+    const runResult = await resultPromise;
     logger.trace(runResult, 'Run result');
 
-    const time = Math.round(runResult.result.time / 1e6),
-        memory = runResult.result.memory / 1024;
-
-    let status: TestcaseResultType = null,
-        message = null;
-
     if (runResult.outputLimitExceeded) {
-        status = TestcaseResultType.OutputLimitExceeded;
-    } else if (runResult.result.status === SandboxStatus.TimeLimitExceeded) {
-        status = TestcaseResultType.TimeLimitExceeded;
-    } else if (runResult.result.status === SandboxStatus.MemoryLimitExceeded) {
-        status = TestcaseResultType.MemoryLimitExceeded;
-    } else if (runResult.result.status === SandboxStatus.RuntimeError) {
-        message = `Killed: ${signals[runResult.result.code]}`;
-        status = TestcaseResultType.RuntimeError;
-    } else if (runResult.result.status !== SandboxStatus.OK) {
-        message =
-            'Warning: corrupt sandbox result ' + inspect(runResult.result);
-        status = TestcaseResultType.RuntimeError;
-    } else {
-        message = `Exited with return code ${runResult.result.code}`;
+        return JUDGE_FAIL;
     }
 
+    const time = Math.round(runResult.result.time / 1e6);
+    const memory = Math.round(runResult.result.memory / 1024);
     const [userOutput, userError] = await Promise.all([
         readFileLength(
-            path.join(workingDir, outputFileName),
+            `${workingDir}/${stdoutFile}`,
             config.worker.dataDisplayLimit,
         ),
         readFileLength(
-            path.join(workingDir, tempErrFile),
+            `${workingDir}/${stderrFile}`,
             config.worker.stderrDisplayLimit,
         ),
     ]);
 
-    try {
-        await rename(
-            path.join(workingDir, outputFileName),
-            path.join(spjWorkingDir, 'user_out'),
-        );
-    } catch (e) {
-        if (
-            e.code === 'ENOENT' &&
-            runResult.result.status === SandboxStatus.OK &&
-            !runResult.outputLimitExceeded
-        ) {
-            status = TestcaseResultType.FileError;
-        }
-    }
+    if (runResult.result.status !== SandboxStatus.OK) {
+        let status: TestcaseResultType;
+        let message: string | null = null;
 
-    const partialResult = {
-        time,
-        memory,
-        userOutput,
-        userError,
-        systemMessage: message,
-    };
-    if (status !== null) {
+        switch (runResult.result.status) {
+            case SandboxStatus.TimeLimitExceeded:
+                status = TestcaseResultType.TimeLimitExceeded;
+                break;
+
+            case SandboxStatus.MemoryLimitExceeded:
+                status = TestcaseResultType.MemoryLimitExceeded;
+                break;
+
+            case SandboxStatus.RuntimeError:
+                status = TestcaseResultType.RuntimeError;
+                message = `Killed: ${signals[runResult.result.code]}`;
+                break;
+
+            default:
+                status = TestcaseResultType.JudgementFailed;
+        }
+
         return {
-            scoringRate: 0,
-            spjMessage: null,
+            time,
+            memory,
+            userOutput,
+            userError,
             result: status,
-            ...partialResult,
+            systemMessage: message,
         };
     }
 
-    // copy answerFile to workingDir
-    if (task.answerData != null)
-        try {
-            await copyFile(
+    const message = `Exited with return code ${runResult.result.code}`;
+
+    logger.debug(`Copying files for diff`);
+    try {
+        await Promise.all([
+            rename(`${workingDir}/${stdoutFile}`, `${spjWorkingDir}/user_out`),
+
+            copyFile(
                 `${config.tmpDir}/data/${task.answerData}`,
                 `${spjWorkingDir}/answer`,
-            );
-        } catch (e) {
-            return {
-                time: 0,
-                memory: 0,
-                userOutput: '',
-                userError: '',
-                scoringRate: 0,
-                spjMessage: '',
-                result: TestcaseResultType.FileError,
-            };
-        }
+            ),
+        ]);
+    } catch (e) {
+        return JUDGE_FAIL;
+    }
 
     logger.debug(`Running diff`);
     const diffResult = await runDiff(num, spjWorkingDir, 'user_out', 'answer');
     logger.trace(diffResult, 'diff result');
 
     return {
-        scoringRate: diffResult.pass ? 1 : 0,
-        spjMessage: diffResult.message,
+        time,
+        memory,
+        userOutput,
+        userError,
+        systemMessage: message,
         result: diffResult.pass
             ? TestcaseResultType.Accepted
             : TestcaseResultType.WrongAnswer,
-        ...partialResult,
     };
 }
