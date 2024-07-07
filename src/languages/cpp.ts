@@ -2,7 +2,7 @@ export const lang = {
     name: 'cpp',
     sourceFileName: 'a.cpp',
     fileExtension: 'cpp',
-    binarySizeLimit: 5000 * 1024,
+    binarySizeLimit: 50 * 1024 * 1024, // 50MB
 
     // Note that these two paths are in the sandboxed environment.
     compile: (sourcePath, outputDirectory, doNotUseX32Abi) => ({
