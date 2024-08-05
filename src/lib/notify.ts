@@ -1,10 +1,10 @@
 import type { TransactionSql } from 'postgres';
 import type {
-    CaseEmit,
     CaseStatus,
+    CaseUpdate,
     JudgeStatus,
     SubmissionUpdate,
-    SubtaskEmit,
+    SubtaskUpdate,
 } from '../interfaces';
 
 export const notify = async (sid: string, sql: TransactionSql) => {
@@ -14,7 +14,6 @@ export const notify = async (sid: string, sql: TransactionSql) => {
             judge_status: JudgeStatus;
             submission_time: number;
             submission_memory: number;
-            submission_message: string | null;
         } & (
             | {
                   subtask_id: string;
@@ -33,37 +32,23 @@ export const notify = async (sid: string, sql: TransactionSql) => {
                       case_time: number;
                       case_memory: number;
                       case_status: CaseStatus | null;
-
-                      user_in: string | null;
-                      user_out: string | null;
-                      user_error: string | null;
-                      answer_out: string | null;
-                      spj_message: string | null;
-                      system_message: string | null;
                   }
                 | {
                       case_num: null;
                       case_time: null;
                       case_memory: null;
                       case_status: null;
-
-                      user_in: null;
-                      user_out: null;
-                      user_error: null;
-                      answer_out: null;
-                      spj_message: null;
-                      system_message: null;
                   }
             ))[]
     >`
             SELECT
                 s.score AS submission_score, s.status AS judge_status,
-                s.time_usage AS submission_time, s.memory_usage AS submission_memory, s.error_message AS submission_error,
+                s.time_usage AS submission_time, s.memory_usage AS submission_memory,
 
                 sub.id AS subtask_id, sub.kind, sub.score AS subtask_score,
 
                 c.num AS case_num, c.time_usage AS case_time, c.memory_usage AS case_memory,
-                c.status AS case_status, user_in, user_out, user_error, answer_out, spj_message, system_message
+                c.status AS case_status
             FROM submissions s
             LEFT JOIN subtask_results sub ON sub.submission_id = s.id
             LEFT JOIN case_results c ON c.subtask_id = sub.id
@@ -72,40 +57,27 @@ export const notify = async (sid: string, sql: TransactionSql) => {
 
     if (sub.length === 0) return; // Not Found
 
-    const subtasks: SubtaskEmit[] = [];
+    const subtasks: SubtaskUpdate[] = [];
 
     if (sub[0].subtask_id !== null) {
         for (const [idx, c] of sub.entries()) {
             if (c.subtask_id === null) throw 'subtask_id null, impossible';
 
-            const case_result: CaseEmit | null = c.case_num
-                ? {
-                      num: c.case_num,
-
-                      time_usage: c.case_time,
-                      memory_usage: c.case_memory,
-                      case_status: c.case_status,
-
-                      user_in: c.user_in,
-                      user_out: c.user_out,
-                      user_error: c.user_error,
-                      answer_out: c.answer_out,
-                      spj_message: c.spj_message,
-                      system_message: c.system_message,
-                  }
+            const caseUpdate: CaseUpdate | null = c.case_num
+                ? [c.case_num, c.case_status, c.case_time, c.case_memory]
                 : null;
 
             if (idx === 0 || c.subtask_id !== sub[idx - 1].subtask_id) {
-                subtasks.push({
-                    cases: case_result ? [case_result] : [],
-
-                    score: c.subtask_score,
-                    kind: c.kind,
-                });
-            } else {
-                if (case_result !== null) {
-                    subtasks.at(-1)!.cases.push(case_result);
-                }
+                // first case or case with a new subtask_id
+                // create a new subtask
+                subtasks.push(
+                    caseUpdate
+                        ? [c.kind, c.subtask_score, [caseUpdate]]
+                        : [c.kind, c.subtask_score, []],
+                );
+            } else if (caseUpdate !== null) {
+                // append to current subtask
+                subtasks.at(-1)![2].push(caseUpdate);
             }
         }
     }
@@ -113,10 +85,9 @@ export const notify = async (sid: string, sql: TransactionSql) => {
     const data: SubmissionUpdate & { id: string } = {
         id: sid,
         score: sub[0].submission_score,
-        judge_status: sub[0].judge_status,
-        time_usage: sub[0].submission_time,
-        memory_usage: sub[0].submission_memory,
-        error_message: sub[0].submission_message,
+        status: sub[0].judge_status,
+        time: sub[0].submission_time,
+        memory: sub[0].submission_memory,
 
         subtasks,
     };

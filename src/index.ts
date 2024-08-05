@@ -479,8 +479,6 @@ const main = async () => {
                         status = ${status}
                         WHERE id = ${sid};
                     `;
-                    await notify(sid, sql);
-                    logger.debug('done notify');
                 } catch (e) {
                     if (e instanceof PostgresError) {
                         throw e;
@@ -500,6 +498,11 @@ const main = async () => {
                 if (currentSid)
                     await sql`UPDATE submissions SET status = 'judgement_failed' WHERE id = ${currentSid};`;
             });
+
+        if (currentSid) {
+            await sql.notify('submission_done', currentSid).catch(() => {});
+            logger.debug('done notify');
+        }
     }
 };
 

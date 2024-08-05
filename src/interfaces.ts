@@ -115,12 +115,17 @@ export interface SubtaskEmit {
     kind: 'sum' | 'min';
 }
 
-export interface SubmissionUpdate {
-    score: number;
-    judge_status: JudgeStatus;
-    time_usage: number;
-    memory_usage: number;
-    error_message: string | null;
+// num, status, time, memory
+export type CaseUpdate = [number, CaseStatus | null, number, number];
 
-    subtasks: SubtaskEmit[];
-}
+// score, cases
+export type SubtaskUpdate = ['sum' | 'min', number, CaseUpdate[]];
+
+export type SubmissionUpdate = {
+    score: number;
+    status: JudgeStatus;
+    time: number;
+    memory: number;
+
+    subtasks: SubtaskUpdate[];
+};
