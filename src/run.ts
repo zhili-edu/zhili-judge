@@ -135,6 +135,8 @@ export async function runProgram(
                     mkdir(dataDir),
                 );
                 outputLimitExceeded = true;
+                if (result.status === SandboxStatus.OK)
+                    result.status = SandboxStatus.OutputLimitExceeded;
             }
 
             return { outputLimitExceeded, result };
