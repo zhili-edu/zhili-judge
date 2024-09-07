@@ -315,6 +315,10 @@ const judgeCase = async (
             status = 'memory_limit_exceeded';
             break;
 
+        case TestcaseResultType.OutputLimitExceeded:
+            status = 'output_limit_exceeded';
+            break;
+
         case TestcaseResultType.RuntimeError:
             status = 'runtime_error';
             break;

@@ -79,10 +79,6 @@ export async function judgeStandard(
     const runResult = await resultPromise;
     logger.trace(runResult, 'Run result');
 
-    if (runResult.outputLimitExceeded) {
-        return JUDGE_FAIL;
-    }
-
     const time = Math.round(runResult.result.time / 1e6);
     const memory = Math.round(runResult.result.memory / 1024);
     const [userOutput, userError] = await Promise.all([
@@ -107,6 +103,10 @@ export async function judgeStandard(
 
             case SandboxStatus.MemoryLimitExceeded:
                 status = TestcaseResultType.MemoryLimitExceeded;
+                break;
+
+            case SandboxStatus.OutputLimitExceeded:
+                status = TestcaseResultType.OutputLimitExceeded;
                 break;
 
             case SandboxStatus.RuntimeError:
