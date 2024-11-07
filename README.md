@@ -1,5 +1,7 @@
 # README
 
+Install libfmt v9.0.0
+
 Create rootfs:
 
 ```bash
