@@ -1,35 +1,27 @@
 {
-    "name": "zhili-judge",
-    "version": "0.0.1",
-    "description": "Judge daemon for Zhili Platform. A fork from Menci/judge-v3.",
-    "main": "",
-    "author": "c0per",
-    "license": "GPL-3.0",
-    "dependencies": {
-        "ali-oss": "^6.20.0",
-        "async-mutex": "^0.4.1",
-        "pino": "^8.17.2",
-        "pino-pretty": "^10.3.1",
-        "postgres": "^3.4.3",
-        "simple-sandbox": "github:c0per/simple-sandbox#main",
-        "typescript": "^5.3.3"
-    },
-    "scripts": {
-        "build": "tsc -d -p .",
-        "build:watch": "tsc -w -d -p .",
-        "lint": "eslint ./src",
-        "run": "node ./dist/index.js"
-    },
-    "devDependencies": {
-        "@types/ali-oss": "^6.16.11",
-        "@types/node": "^16.11.47",
-        "@typescript-eslint/eslint-plugin": "^7.3.1",
-        "@typescript-eslint/parser": "^7.3.1",
-        "eslint": "^8.57.0"
-    },
-    "prettier": {
-        "tabWidth": 4,
-        "singleQuote": true,
-        "trailingComma": "all"
-    }
+  "name": "zhili-judge",
+  "version": "0.0.1",
+  "description": "Judge daemon for Zhili Platform. A fork from Menci/judge-v3.",
+  "main": "",
+  "author": "c0per",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "ali-oss": "^6.20.0",
+    "async-mutex": "^0.4.1",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "postgres": "^3.4.3",
+    "simple-sandbox": "github:c0per/simple-sandbox#main",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "tsc -d -p .",
+    "build:watch": "tsc -w -d -p .",
+    "run": "node ./dist/index.js"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/ali-oss": "^6.16.11",
+    "@types/node": "^16.11.47"
+  }
 }

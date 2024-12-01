@@ -1,26 +1,26 @@
 {
-    "tmpDir": "/path/to/tmp",
-    "sandbox": {
-        "chroot": "/path/to/sandbox/rootfs",
-        "mountProc": true,
-        "redirectBeforeChroot": false,
-        "user": "nobody",
-        "cgroup": "zhili-judge",
-        "environments": [
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "LC_MESSAGES=zh_CN.UTF-8",
-            "LANG=zh_CN.UTF-8",
-            "HOME=/tmp"
-        ],
-        "hostname": "sandbox"
-    },
-    "worker": {
-        "compilerMessageLimit": 50000,
-        "doNotUseX32ABI": true,
-        "spjTimeLimit": 1501,
-        "spjMemoryLimit": 256,
-        "dataDisplayLimit": 128,
-        "stderrDisplayLimit": 5120,
-        "outputLimit": 104857600
-    }
+  "tmpDir": "/path/to/tmp",
+  "sandbox": {
+    "chroot": "/path/to/sandbox/rootfs",
+    "mountProc": true,
+    "redirectBeforeChroot": false,
+    "user": "nobody",
+    "cgroup": "zhili-judge",
+    "environments": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LC_MESSAGES=zh_CN.UTF-8",
+      "LANG=zh_CN.UTF-8",
+      "HOME=/tmp"
+    ],
+    "hostname": "sandbox"
+  },
+  "worker": {
+    "compilerMessageLimit": 50000,
+    "doNotUseX32ABI": true,
+    "spjTimeLimit": 1501,
+    "spjMemoryLimit": 256,
+    "dataDisplayLimit": 128,
+    "stderrDisplayLimit": 5120,
+    "outputLimit": 104857600
+  }
 }
