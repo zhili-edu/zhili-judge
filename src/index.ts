@@ -6,6 +6,7 @@ import { Semaphore } from "async-mutex";
 import type { TransactionSql } from "postgres";
 import postgres, { PostgresError } from "postgres";
 import type { Adapter } from "./adapters";
+import { ContestAdapter } from "./adapters/contest";
 import { NormalAdapter } from "./adapters/normal";
 import { compile } from "./compile";
 import config from "./config.json";
@@ -74,7 +75,9 @@ const getSubmissionInfo = async (
   };
 };
 
-const pollSubmission = async (sql: TransactionSql): Promise<SubmissionInfo> => {
+const pollSubmission = async (
+  sql: TransactionSql,
+): Promise<["normal" | "contest", SubmissionInfo]> => {
   for (;;) {
     const [data] = await sql<
       [{ id: string; code: string; lang: string; problem_id: string }?]
@@ -87,7 +90,21 @@ const pollSubmission = async (sql: TransactionSql): Promise<SubmissionInfo> => {
     `;
 
     if (data) {
-      return getSubmissionInfo(data, sql);
+      return ["normal", await getSubmissionInfo(data, sql)];
+    }
+
+    const [contestData] = await sql<
+      [{ id: string; code: string; lang: string; problem_id: string }?]
+    >`
+      SELECT id, code, lang, problem_id
+      FROM contest_submissions
+      WHERE status = 'in_queue'
+      LIMIT 1
+      FOR UPDATE SKIP LOCKED;
+    `;
+
+    if (contestData) {
+      return ["contest", await getSubmissionInfo(contestData, sql)];
     }
 
     await new Promise((res) => setTimeout(res, 1000));
@@ -365,9 +382,12 @@ const main = async () => {
   for (;;) {
     await sql
       .begin(async (sql) => {
-        const sub = await pollSubmission(sql);
+        const [kind, sub] = await pollSubmission(sql);
 
-        const adapter = new NormalAdapter(sql, sub.sid, sub.test_id);
+        const adapter =
+          kind === "normal"
+            ? new NormalAdapter(sql, sub.sid, sub.test_id)
+            : new ContestAdapter(sql, sub.sid, sub.test_id);
 
         await judgeSubmission(client, sub, adapter).catch((e) => {
           if (e instanceof PostgresError) {

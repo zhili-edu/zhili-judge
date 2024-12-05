@@ -1,11 +1,15 @@
 import type { TransactionSql } from "postgres";
 import type { Adapter } from ".";
-import type { CaseInfo, SubtaskInfo } from "../interfaces";
-import type { CaseStatus, JudgeStatus, StandardRunResult } from "../interfaces";
-import { notify } from "../lib/notify";
+import type {
+  CaseInfo,
+  CaseStatus,
+  JudgeStatus,
+  StandardRunResult,
+  SubtaskInfo,
+} from "../interfaces";
 import { sanitizeDbString } from "../utils";
 
-export class NormalAdapter implements Adapter {
+export class ContestAdapter implements Adapter {
   sql: TransactionSql;
   sid: string;
   test_id: string;
@@ -19,7 +23,7 @@ export class NormalAdapter implements Adapter {
   createSubtaskResults() {
     return this.sql<SubtaskInfo[]>`
       WITH results AS (
-        INSERT INTO subtask_results
+        INSERT INTO contest_subtask_results
           (submission_id, num, score, time_usage, memory_usage, kind)
         SELECT
           ${this.sid} AS submission_id,
@@ -36,7 +40,8 @@ export class NormalAdapter implements Adapter {
       SELECT
         subtasks.id AS subtask_id, subtasks.score,
         results.id AS result_id
-      FROM subtasks JOIN results USING (num)
+      FROM subtasks
+      JOIN results USING (num)
       WHERE test_id = ${this.test_id}
       ORDER BY num ASC;
     `;
@@ -54,7 +59,7 @@ export class NormalAdapter implements Adapter {
       ),
 
       results AS (
-        INSERT INTO case_results
+        INSERT INTO contest_case_results
           (subtask_id, num, time_usage, memory_usage, status, user_in, answer_out)
         SELECT
           ${subtask_result_id} AS subtask_id,
@@ -83,15 +88,13 @@ export class NormalAdapter implements Adapter {
   async updateStatus(status: JudgeStatus, compileMsg?: string) {
     if (compileMsg)
       await this.sql`
-        UPDATE submissions SET status = ${status}, error_message = ${compileMsg}
+        UPDATE contest_submissions SET status = ${status}, error_message = ${compileMsg}
         WHERE id = ${this.sid}
       `;
     else
       await this.sql`
-        UPDATE submissions SET status = ${status} WHERE id = ${this.sid};
+        UPDATE contest_submissions SET status = ${status} WHERE id = ${this.sid};
       `;
-
-    await notify(this.sid, this.sql);
   }
 
   async finalize(
@@ -99,7 +102,7 @@ export class NormalAdapter implements Adapter {
     { score, time, memory }: { score: number; time: number; memory: number },
   ) {
     await this.sql`
-      UPDATE submissions
+      UPDATE contest_submissions
       SET
         score = ${score},
         time_usage = ${time},
@@ -107,8 +110,6 @@ export class NormalAdapter implements Adapter {
         status = ${status}
       WHERE id = ${this.sid};
     `;
-
-    await this.sql.notify("submission_done", this.sid);
   }
 
   finalizeSubtask(
@@ -116,18 +117,15 @@ export class NormalAdapter implements Adapter {
     { score, time, memory }: { score: number; time: number; memory: number },
   ) {
     return this.sql`
-      UPDATE subtask_results
-      SET
-        score = ${score},
-        time_usage = ${time},
-        memory_usage = ${memory}
+      UPDATE contest_subtask_results
+      SET score = ${score}, time_usage = ${time}, memory_usage = ${memory}
       WHERE id = ${result_id};
     `;
   }
 
   updateCaseStatus(result_id: string, status: CaseStatus) {
     return this
-      .sql`UPDATE case_results SET status = ${status} WHERE id = ${result_id};`;
+      .sql`UPDATE contest_case_results SET status = ${status} WHERE id = ${result_id};`;
   }
 
   async finalizeCase(
@@ -136,7 +134,7 @@ export class NormalAdapter implements Adapter {
     result: StandardRunResult,
   ) {
     await this.sql`
-      UPDATE case_results
+      UPDATE contest_case_results
       SET
         time_usage = ${result.time},
         memory_usage = ${result.memory},
@@ -146,7 +144,5 @@ export class NormalAdapter implements Adapter {
         status = ${status}
       WHERE id = ${result_id};
     `;
-
-    await notify(this.sid, this.sql);
   }
 }
