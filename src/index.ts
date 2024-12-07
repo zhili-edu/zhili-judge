@@ -380,7 +380,7 @@ const main = async () => {
   logger.info("Judger start.");
 
   for (;;) {
-    await sql
+    const subIdToNotify = await sql
       .begin(async (sql) => {
         const [kind, sub] = await pollSubmission(sql);
 
@@ -398,12 +398,18 @@ const main = async () => {
 
           return adapter.updateStatus("judgement_failed");
         });
+
+        return kind === "normal" ? adapter.sid : null;
       })
       .catch(async (e) => {
         // Postgres Error from pollSubmission()
         logger.error(e.message);
         logger.error(e.stack);
+
+        return null;
       });
+
+    if (subIdToNotify) await sql.notify("submission_done", subIdToNotify);
   }
 };
 

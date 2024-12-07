@@ -107,8 +107,6 @@ export class NormalAdapter implements Adapter {
         status = ${status}
       WHERE id = ${this.sid};
     `;
-
-    await this.sql.notify("submission_done", this.sid);
   }
 
   finalizeSubtask(
