@@ -1,13 +1,13 @@
 import type { TransactionSql } from "postgres";
-import type { Adapter } from ".";
 import type {
   CaseInfo,
   CaseStatus,
   JudgeStatus,
   StandardRunResult,
   SubtaskInfo,
-} from "../interfaces";
-import { sanitizeDbString } from "../utils";
+} from "../interfaces.js";
+import { sanitizeDbString } from "../utils.js";
+import type { Adapter } from "./index.js";
 
 export class ContestAdapter implements Adapter {
   sql: TransactionSql;

@@ -5,9 +5,11 @@
   "main": "",
   "author": "c0per",
   "license": "GPL-3.0",
+  "type": "module",
   "dependencies": {
     "ali-oss": "^6.20.0",
     "async-mutex": "^0.4.1",
+    "cbor-x": "^1.6.0",
     "pino": "^8.17.2",
     "pino-pretty": "^10.3.1",
     "postgres": "^3.4.3",

@@ -1,5 +1,10 @@
-import type { CaseInfo, SubtaskInfo } from "../interfaces";
-import type { CaseStatus, JudgeStatus, StandardRunResult } from "../interfaces";
+import type {
+  CaseInfo,
+  CaseStatus,
+  JudgeStatus,
+  StandardRunResult,
+  SubtaskInfo,
+} from "../interfaces.js";
 
 export interface Adapter {
   createSubtaskResults: () => Promise<SubtaskInfo[]>;

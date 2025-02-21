@@ -4,23 +4,23 @@ import { dirname } from "node:path";
 import OSS from "ali-oss";
 import { Semaphore } from "async-mutex";
 import type { TransactionSql } from "postgres";
-import postgres, { PostgresError } from "postgres";
-import type { Adapter } from "./adapters";
-import { ContestAdapter } from "./adapters/contest";
-import { NormalAdapter } from "./adapters/normal";
-import { compile } from "./compile";
-import config from "./config.json";
+import postgres from "postgres";
+import { ContestAdapter } from "./adapters/contest.js";
+import type { Adapter } from "./adapters/index.js";
+import { NormalAdapter } from "./adapters/normal.js";
+import { compile } from "./compile.js";
+import config from "./config.json" with { type: "json" };
 import {
   type CaseStatus,
   type JudgeStatus,
   type SubtaskInfo,
   TaskStatus,
   TestcaseResultType,
-} from "./interfaces";
-import { judgeStandard } from "./judge";
-import { type Language, getLanguage } from "./languages";
-import logger from "./lib/logger";
-import { readFileLength } from "./utils";
+} from "./interfaces.js";
+import { judgeStandard } from "./judge.js";
+import { type Language, getLanguage } from "./languages/index.js";
+import logger from "./lib/logger.js";
+import { readFileLength } from "./utils.js";
 
 const sem = new Semaphore(4);
 const semNumbers = Array.from({ length: 4 }, (_, idx) => idx);
@@ -390,7 +390,7 @@ const main = async () => {
             : new ContestAdapter(sql, sub.sid, sub.test_id);
 
         await judgeSubmission(client, sub, adapter).catch((e) => {
-          if (e instanceof PostgresError) {
+          if (e instanceof postgres.PostgresError) {
             throw e;
           }
 

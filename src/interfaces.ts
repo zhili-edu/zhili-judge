@@ -1,4 +1,4 @@
-import type { Language } from "./languages";
+import type { Language } from "./languages/index.js";
 
 export interface StandardRunTask {
   inputData: string;
@@ -90,17 +90,20 @@ export type CaseStatus =
   | "judgement_failed";
 
 // num, status, time, memory
-export type CaseUpdate = [number, CaseStatus | null, number, number];
-
-// score, cases
-export type SubtaskUpdate = ["sum" | "min", number, CaseUpdate[]];
-
-export type SubmissionUpdate = {
-  score: number;
-  status: JudgeStatus;
+export type CaseUpdate = {
+  status: CaseStatus | null;
   time: number;
   memory: number;
+};
 
+// score, cases
+export type SubtaskUpdate = {
+  kind: "sum" | "min";
+  cases: CaseUpdate[];
+};
+
+export type SubmissionUpdate = {
+  status: JudgeStatus;
   subtasks: SubtaskUpdate[];
 };
 

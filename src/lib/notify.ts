@@ -1,3 +1,4 @@
+import { encode } from "cbor-x";
 import type { TransactionSql } from "postgres";
 import type {
   CaseStatus,
@@ -5,7 +6,7 @@ import type {
   JudgeStatus,
   SubmissionUpdate,
   SubtaskUpdate,
-} from "../interfaces";
+} from "../interfaces.js";
 
 export const notify = async (sid: string, sql: TransactionSql) => {
   const sub = await sql<
@@ -64,7 +65,7 @@ export const notify = async (sid: string, sql: TransactionSql) => {
       if (c.subtask_id === null) throw "subtask_id null, impossible";
 
       const caseUpdate: CaseUpdate | null = c.case_num
-        ? [c.case_num, c.case_status, c.case_time, c.case_memory]
+        ? { status: c.case_status, time: c.case_time, memory: c.case_memory }
         : null;
 
       if (idx === 0 || c.subtask_id !== sub[idx - 1].subtask_id) {
@@ -72,8 +73,8 @@ export const notify = async (sid: string, sql: TransactionSql) => {
         // create a new subtask
         subtasks.push(
           caseUpdate
-            ? [c.kind, c.subtask_score, [caseUpdate]]
-            : [c.kind, c.subtask_score, []],
+            ? { kind: c.kind, cases: [caseUpdate] }
+            : { kind: c.kind, cases: [] },
         );
       } else if (caseUpdate !== null) {
         // append to current subtask
@@ -84,13 +85,10 @@ export const notify = async (sid: string, sql: TransactionSql) => {
 
   const data: SubmissionUpdate & { id: string } = {
     id: sid,
-    score: sub[0].submission_score,
     status: sub[0].judge_status,
-    time: sub[0].submission_time,
-    memory: sub[0].submission_memory,
-
     subtasks,
   };
 
-  await sql.notify("submission", JSON.stringify(data));
+  const payload = encode(data).toString("base64");
+  await sql.notify("submission", payload);
 };

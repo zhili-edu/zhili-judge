@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { copyFile, rename } from "node:fs/promises";
-import mainLogger from "./lib/logger";
+import mainLogger from "./lib/logger.js";
 
 import { SandboxStatus } from "simple-sandbox";
-import config from "./config.json";
+import config from "./config.json" with { type: "json" };
 import {
   type StandardRunResult,
   type StandardRunTask,

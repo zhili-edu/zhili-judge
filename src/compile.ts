@@ -6,7 +6,7 @@ import {
   getUidAndGidInSandbox,
   startSandbox,
 } from "simple-sandbox";
-import config from "./config.json";
+import config from "./config.json" with { type: "json" };
 import { TaskStatus } from "./interfaces.js";
 import type { Language } from "./languages/index.js";
 import {

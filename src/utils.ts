@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { type FileHandle, mkdir, open, rm } from "node:fs/promises";
 import { promisify } from "node:util";
 import { getUidAndGidInSandbox } from "simple-sandbox";
-import globalConfig from "./config.json";
+import globalConfig from "./config.json" with { type: "json" };
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

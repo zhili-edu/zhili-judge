@@ -1,9 +1,14 @@
 import type { TransactionSql } from "postgres";
-import type { Adapter } from ".";
-import type { CaseInfo, SubtaskInfo } from "../interfaces";
-import type { CaseStatus, JudgeStatus, StandardRunResult } from "../interfaces";
-import { notify } from "../lib/notify";
-import { sanitizeDbString } from "../utils";
+import type {
+  CaseInfo,
+  CaseStatus,
+  JudgeStatus,
+  StandardRunResult,
+  SubtaskInfo,
+} from "../interfaces.js";
+import { notify } from "../lib/notify.js";
+import { sanitizeDbString } from "../utils.js";
+import type { Adapter } from "./index.js";
 
 export class NormalAdapter implements Adapter {
   sql: TransactionSql;
