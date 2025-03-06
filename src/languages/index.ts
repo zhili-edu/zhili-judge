@@ -1,3 +1,7 @@
+import { lang } from "./cpp.js";
+
+export const languages: Language[] = [lang];
+
 export interface ExecParam {
   executable: string;
   parameters: string[];
@@ -32,8 +36,6 @@ export interface Language {
     stderrFile?: string | number,
   ) => ExecParam;
 }
-
-export const languages: Language[] = [require("./cpp")].map((f) => f.lang);
 
 export const getLanguage = (name: string): Language | undefined =>
   languages.find((l) => l.name === name);

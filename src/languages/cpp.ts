@@ -1,3 +1,5 @@
+import type { Language } from "./index.js";
+
 export const lang = {
   name: "cpp",
   sourceFileName: "a.cpp",
@@ -5,7 +7,7 @@ export const lang = {
   binarySizeLimit: 50 * 1024 * 1024, // 50MB
 
   // Note that these two paths are in the sandboxed environment.
-  compile: (sourcePath, outputDirectory, doNotUseX32Abi) => ({
+  compile: (sourcePath, outputDirectory, _doNotUseX32Abi) => ({
     // To customize the compilation process,
     // write a shell script or some other stuff,
     // and put it to your sandbox.
@@ -22,8 +24,7 @@ export const lang = {
       "-DONLINE_JUDGE",
       "-Wall",
       "-Wextra",
-      !doNotUseX32Abi && "-mx32",
-    ].filter((x) => x),
+    ],
     time: 5000,
     memory: 1024 * 1024 * 1024 * 2,
     process: 10,
@@ -44,9 +45,9 @@ export const lang = {
     workingDirectory: string,
     time: number,
     memory: number,
-    stdinFile = null,
-    stdoutFile = null,
-    stderrFile = null,
+    stdinFile,
+    stdoutFile,
+    stderrFile,
   ) => ({
     executable: `${binaryDirectory}/a.out`,
     parameters: [],
@@ -57,6 +58,7 @@ export const lang = {
     stdin: stdinFile,
     stdout: stdoutFile,
     stderr: stderrFile,
+    messageFile: "message.txt",
     workingDirectory: workingDirectory,
   }),
-};
+} satisfies Language;
