@@ -78,7 +78,7 @@ export const notify = async (sid: string, sql: TransactionSql) => {
         );
       } else if (caseUpdate !== null) {
         // append to current subtask
-        subtasks.at(-1)?.[2].push(caseUpdate);
+        subtasks.at(-1)?.cases.push(caseUpdate);
       }
     }
   }
