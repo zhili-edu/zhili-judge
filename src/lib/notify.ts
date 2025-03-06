@@ -83,8 +83,8 @@ export const notify = async (sid: string, sql: TransactionSql) => {
     }
   }
 
-  const data: SubmissionUpdate & { id: string } = {
-    id: sid,
+  const data: SubmissionUpdate & { id: Buffer } = {
+    id: Buffer.from(sid.replaceAll("-", ""), "hex"),
     status: sub[0].judge_status,
     subtasks,
   };
